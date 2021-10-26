@@ -1,3 +1,3 @@
-[submodule "neem_interface_python/src/neem-interface"]
+[submodule "src/neem-interface"]
 	path = src/neem-interface
 	url = git@github.com:code-iai/neem-interface.git
