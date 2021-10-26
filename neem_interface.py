@@ -15,7 +15,7 @@ class NEEMInterface:
         self.prolog = Prolog()
 
         # Load neem-interface.pl into KnowRob
-        neem_interface_path = os.path.join(SCRIPT_DIR, os.pardir, "/neem-interface/neem-interface.pl")
+        neem_interface_path = os.path.join(SCRIPT_DIR, os.pardir, "src/neem-interface/neem-interface.pl")
         self.prolog.once(f"ensure_loaded({atom(neem_interface_path)})")
 
         self.current_episode = None
