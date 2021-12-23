@@ -4,13 +4,14 @@ Rosprolog client loosely coupled to ROS and compatible with Python 3
 
 import json
 import os
-import time
 from enum import Enum
 from typing import Optional, Dict, List, Iterator
 from urllib.parse import urlparse
 import re
 
 import roslibpy
+
+from neem_interface_python.utils.rosbridge import ros_client
 
 
 class PrologException(Exception):
@@ -108,11 +109,9 @@ class Prolog(object):
         :type timeout: int
         """
         ros_hostname = urlparse(os.environ["ROS_MASTER_URI"]).hostname
-        self.ros_client = roslibpy.Ros(ros_hostname, 9090)
-        self.ros_client.run()
-        self._simple_query_srv = roslibpy.Service(self.ros_client, f'{name_space}/query', "json_prolog_msgs/srv/PrologQuery")
-        self._next_solution_srv = roslibpy.Service(self.ros_client, f'{name_space}/next_solution', "json_prolog_msgs/srv/PrologNextSolution")
-        self._finish_query_srv = roslibpy.Service(self.ros_client, f'{name_space}/finish', "json_prolog_msgs/srv/PrologFinish")
+        self._simple_query_srv = roslibpy.Service(ros_client, f'{name_space}/query', "json_prolog_msgs/srv/PrologQuery")
+        self._next_solution_srv = roslibpy.Service(ros_client, f'{name_space}/next_solution', "json_prolog_msgs/srv/PrologNextSolution")
+        self._finish_query_srv = roslibpy.Service(ros_client, f'{name_space}/finish', "json_prolog_msgs/srv/PrologFinish")
 
     def query(self, query_str):
         """
@@ -126,6 +125,9 @@ class Prolog(object):
     def once(self, query_str: str) -> Optional[Dict]:
         """
         Call rosprolog once and immediately finish the query.
+        Return None if Prolog returned false.
+        Return a Dict mapping all variables in the query to atoms if the query succeeded.
+        Throw an exception if query execution failed (syntax errors, connection errors etc.)
         """
         q = None
         try:
@@ -138,9 +140,21 @@ class Prolog(object):
             if q is not None:
                 q.finish()
 
+    def ensure_once(self, query_str) -> Dict:
+        """
+        Same as once, but throws an exception if Prolog returns false.
+        """
+        res = self.once(query_str)
+        if res is None:
+            raise PrologException(f"Prolog returned false.\nQuery: {query_str}")
+        return res
+
     def all_solutions(self, query_str: str) -> List[Dict]:
         """
         Requests all solutions from rosprolog, this might take a long time
+        Return an empty List if Prolog returned False.
+        Return a List of Dicts mapping all variables in the query to atoms if the query succeeded.
+        Throw an exception if query execution failed (syntax errors, connection errors etc.)
         """
         return list(PrologQuery(query_str,
                                 iterative=False,
@@ -148,9 +162,22 @@ class Prolog(object):
                                 next_solution_srv=self._next_solution_srv,
                                 finish_srv=self._finish_query_srv).solutions())
 
+    def ensure_all_solutions(self, query_str) -> List[Dict]:
+        """
+        Same as all_solutions, but raise an exception if Prolog returns false.
+        """
+        res = self.all_solutions(query_str)
+        if len(res) == 0:
+            raise PrologException(f"Prolog returned false.\nQuery: {query_str}")
+        return res
+
 
 def atom(string: str):
-    if re.match(".+:'.+'", string):
-        # Has namespace prefix --> don't wrap in quotes
-        return string
-    return f"'{string}'"
+    try:
+        if re.match(".+:'.+'", string):
+            # Has namespace prefix --> don't wrap in quotes
+            return string
+        return f"'{string}'"
+    except:
+        print(string)
+        raise RuntimeError()

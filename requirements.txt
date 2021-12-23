@@ -1,0 +1,4 @@
+roslibpy~=1.2.1
+tqdm~=4.62.3
+scipy~=1.7.3
+python-dateutil~=2.8.2
