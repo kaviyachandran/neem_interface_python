@@ -5,7 +5,7 @@ import time
 from tqdm import tqdm
 
 from neem_interface_python.rosprolog_client import Prolog, atom
-from neem_interface_python.utils.utils import Datapoint
+from neem_interface_python.utils.utils import Datapoint, Pose
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -137,6 +137,14 @@ class NEEMInterface:
             self.prolog.ensure_once(f"kb_project(holds({atom(situation_iri)}, dul:'includesObject', {atom(obj_iri)}))")
         return situation_iri
 
+    def assert_object_pose(self, obj_iri: str, obj_pose: Pose, start_time: float = None, end_time: float = None):
+        if start_time is not None and end_time is not None:
+            qs_query = f"time_scope({start_time}, {end_time}, QS)"
+        elif start_time is not None and end_time is None:
+            qs_query = f"time_scope({start_time}, {time.time()}, QS)"
+        else:
+            qs_query = f"time_scope({time.time()}, {time.time()}, QS)"
+        self.prolog.ensure_once(f"{qs_query}, tf_set_pose({atom(obj_iri)}, {obj_pose.to_knowrob_string()}, QS)")
 
     ### NEEM Parsing ###############################################################
 
@@ -160,6 +168,13 @@ class NEEMInterface:
             return res
         return res["Begin"], res["End"]
 
+    def get_object_pose(self, obj: str, timestamp: float = None) -> Pose:
+        if timestamp is None:
+            query = f"mem_tf_get({atom(obj)}, Pose)"
+        else:
+            query = f"mem_tf_get({atom(obj)}, Pose, {timestamp})"
+        return Pose.from_prolog(self.prolog.ensure_once(query)["Pose"])
+
     def get_tf_trajectory(self, obj: str, start_timestamp: float, end_timestamp: float) -> List:
         res = self.prolog.ensure_once(f"tf_mng_trajectory({atom(obj)}, {start_timestamp}, {end_timestamp}, Trajectory)")
         return res["Trajectory"]
@@ -175,15 +190,13 @@ class Episode:
     start and end a NEEM context (episode).
     """
     def __init__(self, neem_interface: NEEMInterface, task_type: str, env_owl: str, env_owl_ind_name: str,
-                 env_urdf: str,
-                 env_urdf_prefix: str, agent_owl: str, agent_owl_ind_name: str, agent_urdf: str, neem_output_path: str,
+                 env_urdf: str, agent_owl: str, agent_owl_ind_name: str, agent_urdf: str, neem_output_path: str,
                  start_time=None):
         self.neem_interface = neem_interface
         self.task_type = task_type
         self.env_owl = env_owl
         self.env_owl_ind_name = env_owl_ind_name
         self.env_urdf = env_urdf
-        self.env_urdf_prefix = env_urdf_prefix
         self.agent_owl = agent_owl
         self.agent_owl_ind_name = agent_owl_ind_name
         self.agent_urdf = agent_urdf

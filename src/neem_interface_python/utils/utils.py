@@ -16,6 +16,14 @@ class Pose:
     def from_prolog(prolog_pose: List):
         return Pose(reference_frame=prolog_pose[0], pos=prolog_pose[1], ori=Rotation.from_quat(prolog_pose[2]))
 
+    def to_knowrob_string(self) -> str:
+        """
+        Convert to a KnowRob pose "[reference_cs, [x,y,z],[qx,qy,qz,qw]]"
+        """
+        quat = self.ori.as_quat()   # qxyzw
+        return f"[{atom(self.reference_frame)}, [{self.pos[0]},{self.pos[1]},{self.pos[2]}], [{quat[0]}," \
+               f"{quat[1]},{quat[2]},{quat[3]}]]"
+
 
 class Datapoint:
     def __init__(self, timestamp: float, frame: str, reference_frame: str, pos: List[float], ori: Rotation,
@@ -40,7 +48,7 @@ class Datapoint:
         return Datapoint(timestamp=prolog_dp["term"][1], frame=frame, reference_frame=prolog_dp["term"][2][0],
                               pos=prolog_dp["term"][2][1], ori=ori)
 
-    def to_knowrob_string(self):
+    def to_knowrob_string(self) -> str:
         """
         Convert to a KnowRob pose "[reference_cs, [x,y,z],[qx,qy,qz,qw]]"
         """
