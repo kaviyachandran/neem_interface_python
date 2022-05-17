@@ -1,4 +1,5 @@
 import os
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Tuple, Optional
 import time
 
@@ -19,13 +20,18 @@ class NEEMInterface:
     Low-level interface to KnowRob, which enables the easy creation of NEEMs in Python.
     For more ease of use, consider using the Episode object in a 'with' statement instead (see below).
     """
+
     def __init__(self):
         self.prolog = Prolog()
+        self.pool_executor = ThreadPoolExecutor(max_workers=4)
 
         # Load neem-interface.pl into KnowRob
         neem_interface_path = os.path.join(SCRIPT_DIR, os.pardir, "neem-interface", "neem-interface.pl")
         self.prolog.ensure_once(f"ensure_loaded({atom(neem_interface_path)})")
 
+    def __del__(self):
+        # Wait for all currently running futures
+        self.pool_executor.shutdown(wait=True)
 
     ### NEEM Creation ###############################################################
 
@@ -44,7 +50,8 @@ class NEEMInterface:
         """
         End the current episode and save the NEEM to the given path
         """
-        return self.prolog.ensure_once(f"mem_episode_stop({atom(neem_path)}, {end_time if end_time is not None else time.time()})")
+        return self.prolog.ensure_once(
+            f"mem_episode_stop({atom(neem_path)}, {end_time if end_time is not None else time.time()})")
 
     def add_subaction_with_task(self, parent_action, sub_action_type="dul:'Action'", task_type="dul:'Task'",
                                 start_time: float = None, end_time: float = None) -> str:
@@ -75,7 +82,8 @@ class NEEMInterface:
                 tf_set_pose({atom(point.frame)}, {ee_pose_str}, QS).
             """)
 
-    def assert_transition(self, agent_iri: str, object_iri: str, start_time: float, end_time: float) -> Tuple[str, str, str]:
+    def assert_transition(self, agent_iri: str, object_iri: str, start_time: float, end_time: float) -> Tuple[
+        str, str, str]:
         res = self.prolog.ensure_once(f"""
             kb_project([
                 new_iri(InitialScene, soma:'Scene'), is_individual(InitialScene), instance_of(InitialScene, soma:'Scene'),
@@ -102,7 +110,8 @@ class NEEMInterface:
         terminal_state_iri = res["TerminalState"]
         return transition_iri, initial_state_iri, terminal_state_iri
 
-    def assert_agent_with_effector(self, effector_iri: str, agent_type="dul:'PhysicalAgent'", agent_iri: str = None) -> str:
+    def assert_agent_with_effector(self, effector_iri: str, agent_type="dul:'PhysicalAgent'",
+                                   agent_iri: str = None) -> str:
         if agent_iri is None:
             agent_iri = self.prolog.ensure_once(f"""
                 kb_project([
@@ -146,6 +155,22 @@ class NEEMInterface:
             qs_query = f"time_scope({time.time()}, {time.time()}, QS)"
         self.prolog.ensure_once(f"{qs_query}, tf_set_pose({atom(obj_iri)}, {obj_pose.to_knowrob_string()}, QS)")
 
+    def assert_object_trajectory(self, obj_iri: str, obj_poses: List[Pose], start_times: List[float],
+                                 end_times: List[float], insert_last_pose_synchronously=True):
+        """
+        :param insert_last_pose_synchronously: Ensure that the last pose of the trajectory has been inserted when this
+        method returns
+        """
+        # Insert in reversed order, so it becomes easy to wait for the last pose of the trajectory
+        obj_poses_reversed = list(reversed(obj_poses))
+        start_times_reversed = list(reversed(start_times))
+        end_times_reversed = list(reversed(end_times))
+        obj_iris = [obj_iri] * len(obj_poses_reversed)
+        generator = self.pool_executor.map(self.assert_object_pose, obj_iris, obj_poses_reversed, start_times_reversed,
+                                           end_times_reversed)
+        if insert_last_pose_synchronously:
+            next(generator)
+
     ### NEEM Parsing ###############################################################
 
     def load_neem(self, neem_path: str):
@@ -154,16 +179,27 @@ class NEEMInterface:
         """
         self.prolog.ensure_once(f"remember({atom(neem_path)})")
 
-    def get_all_actions(self) -> List[str]:
-        res = self.prolog.ensure_all_solutions("is_action(Action)")
+    def get_all_actions(self, action_type: str = None) -> List[str]:
+        if action_type is not None: # Filter by action type
+            query = f"is_action(Action), instance_of(Action, {atom(action_type)})"
+        else:
+            query = "is_action(Action)"
+        res = self.prolog.ensure_all_solutions(query)
         if len(res) > 0:
             return list(set([dic["Action"] for dic in
                              res]))  # Deduplicate: is_action(A) may yield the same action more than once
         else:
             raise NEEMError("Failed to find any actions")
 
-    def get_interval_for_action(self, action: str) -> Optional[Tuple[float, float]]:
-        res = self.prolog.ensure_once(f"event_interval({atom(action)}, Begin, End)")
+    def get_all_states(self) -> List[str]:
+        res = self.prolog.ensure_all_solutions("is_state(State)")
+        if len(res) > 0:
+            return list(set([dic["State"] for dic in res])) # Deduplicate
+        else:
+            raise NEEMError("Failed to find any states")
+
+    def get_interval_for_event(self, event: str) -> Optional[Tuple[float, float]]:
+        res = self.prolog.ensure_once(f"event_interval({atom(event)}, Begin, End)")
         if res is None:
             return res
         return res["Begin"], res["End"]
@@ -180,8 +216,39 @@ class NEEMInterface:
         return res["Trajectory"]
 
     def get_wrench_trajectory(self, obj: str, start_timestamp: float, end_timestamp: float) -> List:
-        res = self.prolog.ensure_once(f"wrench_mng_trajectory({atom(obj)}, {start_timestamp}, {end_timestamp}, Trajectory)")
+        res = self.prolog.ensure_once(
+            f"wrench_mng_trajectory({atom(obj)}, {start_timestamp}, {end_timestamp}, Trajectory)")
         return res["Trajectory"]
+
+    def get_tasks_for_action(self, action: str) -> List[str]:
+        res = self.prolog.ensure_all_solutions(f"""kb_call([executes_task({atom(action)}, Task), 
+                                                           instance_of(Task, TaskType), 
+                                                           subclass_of(TaskType, dul:'Task')])""")
+        return [dic["Task"] for dic in res]
+
+    def get_triple_objects(self, subject: str, predicate: str) -> List[str]:
+        """
+        Catch-all function for getting the 'object' values for a subject-predicate-object triple.
+        :param subject: IRI of the 'subject' of the triple
+        :param predicate: IRI of the 'predicate' of the triple
+        """
+        res = self.prolog.ensure_all_solutions(f"""kb_call(holds({atom(subject)}, {atom(predicate)}, X))""")
+        if len(res) > 0:
+            return list(set([dic["X"] for dic in res])) # Deduplicate
+        else:
+            raise NEEMError("Failed to find any objects for triple")
+
+    def get_triple_subjects(self, predicate: str, object: str) -> List[str]:
+        """
+        Catch-all function for getting the 'subject' values for a subject-predicate-object triple.
+        :param predicate: IRI of the 'predicate' of the triple
+        :param object: IRI of the 'object' of the triple
+        """
+        res = self.prolog.ensure_all_solutions(f"""kb_call(holds(X, {atom(predicate)}, {atom(object)}))""")
+        if len(res) > 0:
+            return list(set([dic["X"] for dic in res])) # Deduplicate
+        else:
+            raise NEEMError("Failed to find any subjects for triple")
 
 
 class Episode:
@@ -189,6 +256,7 @@ class Episode:
     Convenience object and context manager for NEEM creation. Can be used in a 'with' statement to automatically
     start and end a NEEM context (episode).
     """
+
     def __init__(self, neem_interface: NEEMInterface, task_type: str, env_owl: str, env_owl_ind_name: str,
                  env_urdf: str, agent_owl: str, agent_owl_ind_name: str, agent_urdf: str, neem_output_path: str,
                  start_time=None):
@@ -208,11 +276,13 @@ class Episode:
 
     def __enter__(self):
         self.top_level_action_iri = self.neem_interface.start_episode(self.task_type, self.env_owl,
-                                                                      self.env_owl_ind_name, self.env_urdf, self.agent_owl,
+                                                                      self.env_owl_ind_name, self.env_urdf,
+                                                                      self.agent_owl,
                                                                       self.agent_owl_ind_name, self.agent_urdf,
                                                                       self.start_time)
         self.episode_iri = \
-            self.neem_interface.prolog.ensure_once(f"kb_call(is_setting_for(Episode, {atom(self.top_level_action_iri)}))")[
+            self.neem_interface.prolog.ensure_once(
+                f"kb_call(is_setting_for(Episode, {atom(self.top_level_action_iri)}))")[
                 "Episode"]
         return self
 

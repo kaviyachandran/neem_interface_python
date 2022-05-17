@@ -3,7 +3,7 @@ from typing import List
 from scipy.spatial.transform import Rotation
 import dateutil.parser
 
-from neem_interface_python.rosprolog_client import atom
+from neem_interface_python.rosprolog_client import atom, Prolog
 
 
 class Pose:
@@ -86,3 +86,11 @@ class Datapoint:
         x, y, z, w = ori_lhs
         ori_rhs = Rotation.from_quat([-x, y, -z, w])
         return Datapoint(timestamp, frame, reference_frame, pos_rhs, ori_rhs)
+
+
+def expand_rdf_namespace(prolog: Prolog, short_namespace: str) -> str:
+    return prolog.ensure_once(f"rdf_prefixes:rdf_current_prefix({atom(short_namespace)}, URI)")["URI"]
+
+
+def compact_rdf_namespace(prolog: Prolog, long_namespace: str) -> str:
+    return prolog.ensure_once(f"rdf_prefixes:rdf_current_prefix(NS, {atom(long_namespace)})")["NS"]
