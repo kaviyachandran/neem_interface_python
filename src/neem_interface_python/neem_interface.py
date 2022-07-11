@@ -33,6 +33,9 @@ class NEEMInterface:
         # Wait for all currently running futures
         self.pool_executor.shutdown(wait=True)
 
+    def clear_beliefstate(self):
+        self.prolog.ensure_once("mem_clear_memory")
+
     ### NEEM Creation ###############################################################
 
     def start_episode(self, task_type: str, env_owl: str, env_owl_ind_name: str, env_urdf: str,
@@ -179,7 +182,7 @@ class NEEMInterface:
         """
         Load a NEEM into the KnowRob knowledge base.
         """
-        self.prolog.ensure_once(f"remember({atom(neem_path)})")
+        self.prolog.ensure_once(f"mem_clear_memory, remember({atom(neem_path)})")
 
     def get_all_actions(self, action_type: str = None) -> List[str]:
         if action_type is not None: # Filter by action type
