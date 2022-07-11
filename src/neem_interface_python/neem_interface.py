@@ -147,13 +147,15 @@ class NEEMInterface:
         return situation_iri
 
     def assert_object_pose(self, obj_iri: str, obj_pose: Pose, start_time: float = None, end_time: float = None):
+        print(f"Object pose of {obj_iri} at {start_time}: {obj_pose.to_knowrob_string()}")
         if start_time is not None and end_time is not None:
             qs_query = f"time_scope({start_time}, {end_time}, QS)"
         elif start_time is not None and end_time is None:
             qs_query = f"time_scope({start_time}, {time.time()}, QS)"
         else:
             qs_query = f"time_scope({time.time()}, {time.time()}, QS)"
-        self.prolog.ensure_once(f"{qs_query}, tf_set_pose({atom(obj_iri)}, {obj_pose.to_knowrob_string()}, QS)")
+        self.prolog.ensure_once(f"tf_logger_enable, {qs_query}, tf_set_pose({atom(obj_iri)}, {obj_pose.to_knowrob_string()}, QS),"
+                                f"tf_logger_disable")
 
     def assert_object_trajectory(self, obj_iri: str, obj_poses: List[Pose], start_times: List[float],
                                  end_times: List[float], insert_last_pose_synchronously=True):
