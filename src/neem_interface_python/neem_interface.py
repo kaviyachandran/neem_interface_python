@@ -85,6 +85,9 @@ class NEEMInterface:
                 tf_set_pose({atom(point.frame)}, {ee_pose_str}, QS).
             """)
 
+    def get_tf_trajectory(self, frame: str, start_time: float, end_time: float) -> List[Datapoint]:
+        pass
+
     def assert_transition(self, agent_iri: str, object_iri: str, start_time: float, end_time: float) -> Tuple[
         str, str, str]:
         res = self.prolog.ensure_once(f"""
@@ -157,8 +160,7 @@ class NEEMInterface:
             qs_query = f"time_scope({start_time}, {time.time()}, QS)"
         else:
             qs_query = f"time_scope({time.time()}, {time.time()}, QS)"
-        self.prolog.ensure_once(f"tf_logger_enable, {qs_query}, tf_set_pose({atom(obj_iri)}, {obj_pose.to_knowrob_string()}, QS),"
-                                f"tf_logger_disable")
+        self.prolog.ensure_once(f"{qs_query}, tf_set_pose({atom(obj_iri)}, {obj_pose.to_knowrob_string()}, QS)")
 
     def assert_object_trajectory(self, obj_iri: str, obj_poses: List[Pose], start_times: List[float],
                                  end_times: List[float], insert_last_pose_synchronously=True):
