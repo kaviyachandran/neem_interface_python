@@ -11,8 +11,6 @@ import re
 
 import roslibpy
 
-from neem_interface_python.utils.rosbridge import ros_client
-
 
 class PrologException(Exception):
     pass
@@ -102,13 +100,14 @@ class PrologQuery(object):
 
 
 class Prolog(object):
-    def __init__(self, name_space='rosprolog'):
+    def __init__(self, ros_master_host: str, ros_master_port: int, name_space='rosprolog'):
         """
         :type name_space: str
         :param timeout: Amount of time in seconds spend waiting for rosprolog to become available.
         :type timeout: int
         """
-        ros_hostname = urlparse(os.environ["ROS_MASTER_URI"]).hostname
+        ros_client = roslibpy.Ros(ros_master_host, ros_master_port)
+        ros_client.run()
         self._simple_query_srv = roslibpy.Service(ros_client, f'{name_space}/query', "json_prolog_msgs/srv/PrologQuery")
         self._next_solution_srv = roslibpy.Service(ros_client, f'{name_space}/next_solution', "json_prolog_msgs/srv/PrologNextSolution")
         self._finish_query_srv = roslibpy.Service(ros_client, f'{name_space}/finish', "json_prolog_msgs/srv/PrologFinish")
