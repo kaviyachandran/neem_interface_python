@@ -178,6 +178,37 @@ class NEEMInterface:
         if insert_last_pose_synchronously:
             next(generator)
 
+    ### Pouring specific functions ###
+    def assert_task_and_roles(self, action_iri: str, task_type: str, source_iri: str, dest_iri: str, agent_iri: str,
+                              goal_reached: bool = False) -> str:
+        if task_type == "holding":
+            self.prolog.ensure_once(f"""
+            kb_project([
+            new_iri(Task, "dul:'Task'"), has_type(Task, "soma:'Holding'"), executes_task({action_iri}, Task),
+            has_participant({action_iri}, source_iri), has_participant({action_iri}, dest_iri), 
+            new_iri(Role, soma:'AgentRole'), has_type(Role, soma:'AgentRole'), has_role({agent_iri},Role), 
+            new_iri(Role1, "dul:'Role'"), new_iri(Role2, "dul:'Role'"), new_iri(Role3, "dul:'Role'"),
+            has_type(Role1, "soma:'Container'"), has_type(Role2, "soma:'RecipientRole'"), 
+            has_type(Role3, "soma:'SupportedObject'"), has_role({source_iri}, Role1), has_role({dest_iri}, Role2), 
+            has_role({source_iri}, Role3), new_iri(ContTheory, "soma:'ContainmentTheory'"),
+            has_type(ContTheory, "soma:'ContainmentTheory'"), new_iri(VertTheory, "soma:'VerticalityTheory'"),
+            has_type(VertTheory, "soma:'VerticalityTheory'"), triple(ContTheory, "dul:'isClassifiedBy'", Role1), 
+            triple(VertTheory, "dul:'isClassifiedBy'", Role2)]).
+            """)
+        elif task_type == "moveTo":
+            self.prolog.ensure_once(f"""
+            kb_project([
+            new_iri(Task, "dul:'Task'"), has_type(Task, "soma:'MoveTowards'"), executes_task({action_iri}, Task),
+            )].
+            """)
+        elif task_type == "tilting":
+            pass
+        elif task_type == "tilt_less" and goal_reached is True:
+            pass
+
+
+
+
     ### NEEM Parsing ###############################################################
 
     def load_neem(self, neem_path: str):
