@@ -181,6 +181,9 @@ class NEEMInterface:
     ### Pouring specific functions ###
     def assert_task_and_roles(self, action_iri: str, task_type: str, source_iri: str, dest_iri: str, agent_iri: str,
                               goal_reached: bool = False) -> str:
+
+        # One can make it more descriptive by adding transitions. Initial and Terminal states has objects as participants
+        # are classified by different state types
         if task_type == "holding":
             self.prolog.ensure_once(f"""
             kb_project([
@@ -190,24 +193,51 @@ class NEEMInterface:
             new_iri(Role1, "dul:'Role'"), new_iri(Role2, "dul:'Role'"), new_iri(Role3, "dul:'Role'"),
             has_type(Role1, "soma:'Container'"), has_type(Role2, "soma:'RecipientRole'"), 
             has_type(Role3, "soma:'SupportedObject'"), has_role({source_iri}, Role1), has_role({dest_iri}, Role2), 
-            has_role({source_iri}, Role3), new_iri(ContTheory, "soma:'ContainmentTheory'"),
-            has_type(ContTheory, "soma:'ContainmentTheory'"), new_iri(VertTheory, "soma:'VerticalityTheory'"),
-            has_type(VertTheory, "soma:'VerticalityTheory'"), triple(ContTheory, "dul:'isClassifiedBy'", Role1), 
-            triple(VertTheory, "dul:'isClassifiedBy'", Role2)]).
+            has_role({source_iri}, Role3)]).
             """)
-        elif task_type == "moveTo":
+            # Info on image schema can be added later with state transition by classifying the state by ContainmentState
+            # or say
+            # new_iri(ContTheory, "soma:'ContainmentTheory'"),
+            # has_type(ContTheory, "soma:'ContainmentTheory'"), new_iri(VertTheory, "soma:'VerticalityTheory'"),
+            # has_type(VertTheory, "soma:'VerticalityTheory'"), triple(ContTheory, "dul:'isClassifiedBy'", Role1),
+            # triple(VertTheory, "dul:'isClassifiedBy'", Role2)
+        elif task_type == "MovingTo" or task_type == "MoveLeft" or task_type == "MoveRight" or task_type == "MoveUp" \
+                or task_type == "MoveDown":
+            # There is SPG, LinkageTheory satisfied in this transition
+
             self.prolog.ensure_once(f"""
             kb_project([
-            new_iri(Task, "dul:'Task'"), has_type(Task, "soma:'MoveTowards'"), executes_task({action_iri}, Task),
-            )].
+            new_iri(Task, "dul:'Task'"), has_type(Task, "soma:{task_type}"), executes_task({action_iri}, Task)
+            has_participant({action_iri}, source_iri), has_participant({action_iri}, dest_iri),
+            new_iri(Role, soma:'AgentRole'), has_type(Role, soma:'AgentRole'), has_role({agent_iri},Role),
+            new_iri(Role1, "dul:'Role'"), new_iri(Role2, "dul:'Role'"), new_iri(Role3, "dul:'Role'"),
+            has_type(Role1, "soma:'Container'"), has_type(Role2, "soma:'RecipientRole'"),
+            has_type(Role3, "soma:'MovedObject'"), has_role({source_iri}, Role1),
+            has_role({dest_iri}, Role2), has_role({source_iri}, Role3)]).
             """)
-        elif task_type == "tilting":
-            pass
-        elif task_type == "tilt_less" and goal_reached is True:
-            pass
-
-
-
+        elif task_type == "TiltForward" or task_type == "TiltBackward":
+            self.prolog.ensure_once(f"""
+            kb_project([
+            new_iri(Task, "dul:'Task'"), has_type(Task, "soma:{task_type}"), executes_task({action_iri}, Task)
+            has_participant({action_iri}, source_iri), has_participant({action_iri}, dest_iri),
+            new_iri(Role, soma:'AgentRole'), has_type(Role, soma:'AgentRole'), has_role({agent_iri},Role),
+            new_iri(Role1, "dul:'Role'"), new_iri(Role2, "dul:'Role'"), new_iri(Role3, "dul:'Role'"),
+            has_type(Role1, "soma:'Container'"), has_type(Role2, "soma:'RecipientRole'"),
+            has_type(Role3, "soma:'NonVerticalObject'"), has_role({source_iri}, Role1),
+            has_role({dest_iri}, Role2), has_role({source_iri}, Role3)]).
+            """)
+        elif task_type == "TiltBackward" and goal_reached is True:
+            # once the goal is reached the container role is assigned to the destination object
+            self.prolog.ensure_once(f"""
+            kb_project([
+            new_iri(Task, "dul:'Task'"), has_type(Task, "soma:{task_type}"), executes_task({action_iri}, Task)
+            has_participant({action_iri}, source_iri), has_participant({action_iri}, dest_iri),
+            new_iri(Role, soma:'AgentRole'), has_type(Role, soma:'AgentRole'), has_role({agent_iri},Role),
+            new_iri(Role1, "dul:'Role'"), new_iri(Role2, "dul:'Role'"), new_iri(Role3, "dul:'Role'"),
+            has_type(Role1, "soma:'Container'"), has_type(Role2, "soma:'RecipientRole'"),
+            has_type(Role3, "soma:'NonVerticalObject'"), has_role({dest_iri}, Role1),
+            has_role({dest_iri}, Role2), has_role({source_iri}, Role3)]).
+            """)
 
     ### NEEM Parsing ###############################################################
 
@@ -218,7 +248,7 @@ class NEEMInterface:
         self.prolog.ensure_once(f"mem_clear_memory, remember({atom(neem_path)})")
 
     def get_all_actions(self, action_type: str = None) -> List[str]:
-        if action_type is not None: # Filter by action type
+        if action_type is not None:  # Filter by action type
             query = f"is_action(Action), instance_of(Action, {atom(action_type)})"
         else:
             query = "is_action(Action)"
@@ -232,7 +262,7 @@ class NEEMInterface:
     def get_all_states(self) -> List[str]:
         res = self.prolog.ensure_all_solutions("is_state(State)")
         if len(res) > 0:
-            return list(set([dic["State"] for dic in res])) # Deduplicate
+            return list(set([dic["State"] for dic in res]))  # Deduplicate
         else:
             raise NEEMError("Failed to find any states")
 
@@ -272,7 +302,7 @@ class NEEMInterface:
         """
         res = self.prolog.ensure_all_solutions(f"""kb_call(holds({atom(subject)}, {atom(predicate)}, X))""")
         if len(res) > 0:
-            return list(set([dic["X"] for dic in res])) # Deduplicate
+            return list(set([dic["X"] for dic in res]))  # Deduplicate
         else:
             raise NEEMError("Failed to find any objects for triple")
 
@@ -284,7 +314,7 @@ class NEEMInterface:
         """
         res = self.prolog.ensure_all_solutions(f"""kb_call(holds(X, {atom(predicate)}, {atom(object)}))""")
         if len(res) > 0:
-            return list(set([dic["X"] for dic in res])) # Deduplicate
+            return list(set([dic["X"] for dic in res]))  # Deduplicate
         else:
             raise NEEMError("Failed to find any subjects for triple")
 
