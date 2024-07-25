@@ -185,9 +185,9 @@ class NEEMInterface:
         # One can make it more descriptive by adding transitions. Initial and Terminal states has objects as participants
         # are classified by different state types
         if task_type == "holding":
+            # new_iri(Task, "dul:'Task'"), has_type(Task, "soma:'Holding'"), executes_task({action_iri}, Task),
             self.prolog.ensure_once(f"""
             kb_project([
-            new_iri(Task, "dul:'Task'"), has_type(Task, "soma:'Holding'"), executes_task({action_iri}, Task),
             has_participant({action_iri}, source_iri), has_participant({action_iri}, dest_iri), 
             new_iri(Role, soma:'AgentRole'), has_type(Role, soma:'AgentRole'), has_role({agent_iri},Role), 
             new_iri(Role1, "dul:'Role'"), new_iri(Role2, "dul:'Role'"), new_iri(Role3, "dul:'Role'"),
@@ -204,10 +204,9 @@ class NEEMInterface:
         elif task_type == "MovingTo" or task_type == "MoveLeft" or task_type == "MoveRight" or task_type == "MoveUp" \
                 or task_type == "MoveDown":
             # There is SPG, LinkageTheory satisfied in this transition
-
+            # new_iri(Task, "dul:'Task'"), has_type(Task, "soma:{task_type}"), executes_task({action_iri}, Task)
             self.prolog.ensure_once(f"""
             kb_project([
-            new_iri(Task, "dul:'Task'"), has_type(Task, "soma:{task_type}"), executes_task({action_iri}, Task)
             has_participant({action_iri}, source_iri), has_participant({action_iri}, dest_iri),
             new_iri(Role, soma:'AgentRole'), has_type(Role, soma:'AgentRole'), has_role({agent_iri},Role),
             new_iri(Role1, "dul:'Role'"), new_iri(Role2, "dul:'Role'"), new_iri(Role3, "dul:'Role'"),
@@ -216,9 +215,9 @@ class NEEMInterface:
             has_role({dest_iri}, Role2), has_role({source_iri}, Role3)]).
             """)
         elif task_type == "TiltForward" or task_type == "TiltBackward":
+            # new_iri(Task, "dul:'Task'"), has_type(Task, "soma:{task_type}"), executes_task({action_iri}, Task)
             self.prolog.ensure_once(f"""
             kb_project([
-            new_iri(Task, "dul:'Task'"), has_type(Task, "soma:{task_type}"), executes_task({action_iri}, Task)
             has_participant({action_iri}, source_iri), has_participant({action_iri}, dest_iri),
             new_iri(Role, soma:'AgentRole'), has_type(Role, soma:'AgentRole'), has_role({agent_iri},Role),
             new_iri(Role1, "dul:'Role'"), new_iri(Role2, "dul:'Role'"), new_iri(Role3, "dul:'Role'"),
@@ -228,9 +227,9 @@ class NEEMInterface:
             """)
         elif task_type == "TiltBackward" and goal_reached is True:
             # once the goal is reached the container role is assigned to the destination object
+            # new_iri(Task, "dul:'Task'"), has_type(Task, "soma:{task_type}"), executes_task({action_iri}, Task)
             self.prolog.ensure_once(f"""
             kb_project([
-            new_iri(Task, "dul:'Task'"), has_type(Task, "soma:{task_type}"), executes_task({action_iri}, Task)
             has_participant({action_iri}, source_iri), has_participant({action_iri}, dest_iri),
             new_iri(Role, soma:'AgentRole'), has_type(Role, soma:'AgentRole'), has_role({agent_iri},Role),
             new_iri(Role1, "dul:'Role'"), new_iri(Role2, "dul:'Role'"), new_iri(Role3, "dul:'Role'"),
