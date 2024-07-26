@@ -190,9 +190,9 @@ class NEEMInterface:
             kb_project([
             has_participant({action_iri}, source_iri), has_participant({action_iri}, dest_iri), 
             new_iri(Role, soma:'AgentRole'), has_type(Role, soma:'AgentRole'), has_role({agent_iri},Role), 
-            new_iri(Role1, "dul:'Role'"), new_iri(Role2, "dul:'Role'"), new_iri(Role3, "dul:'Role'"),
-            has_type(Role1, "soma:'Container'"), has_type(Role2, "soma:'RecipientRole'"), 
-            has_type(Role3, "soma:'SupportedObject'"), has_role({source_iri}, Role1), has_role({dest_iri}, Role2), 
+            new_iri(Role1, dul:'Role'), new_iri(Role2, dul:'Role'), new_iri(Role3, dul:'Role'),
+            has_type(Role1, soma:'Container'), has_type(Role2, soma:'RecipientRole'), 
+            has_type(Role3, soma:'SupportedObject'), has_role({source_iri}, Role1), has_role({dest_iri}, Role2), 
             has_role({source_iri}, Role3)]).
             """)
             # Info on image schema can be added later with state transition by classifying the state by ContainmentState
@@ -209,32 +209,33 @@ class NEEMInterface:
             kb_project([
             has_participant({action_iri}, source_iri), has_participant({action_iri}, dest_iri),
             new_iri(Role, soma:'AgentRole'), has_type(Role, soma:'AgentRole'), has_role({agent_iri},Role),
-            new_iri(Role1, "dul:'Role'"), new_iri(Role2, "dul:'Role'"), new_iri(Role3, "dul:'Role'"),
-            has_type(Role1, "soma:'Container'"), has_type(Role2, "soma:'RecipientRole'"),
-            has_type(Role3, "soma:'MovedObject'"), has_role({source_iri}, Role1),
+            new_iri(Role1, dul:'Role'), new_iri(Role2, dul:'Role'), new_iri(Role3, dul:'Role'),
+            has_type(Role1, soma:'Container'), has_type(Role2, soma:'RecipientRole'),
+            has_type(Role3, soma:'MovedObject'), has_role({source_iri}, Role1),
             has_role({dest_iri}, Role2), has_role({source_iri}, Role3)]).
             """)
         elif task_type == "TiltForward" or task_type == "TiltBackward":
-            # new_iri(Task, "dul:'Task'"), has_type(Task, "soma:{task_type}"), executes_task({action_iri}, Task)
+            # new_iri(Task, dul:'Task'"), has_type(Task, "soma:{task_type}"), executes_task({action_iri}, Task)
+            # has_type(Role3, soma:'NonVerticalObject')
             self.prolog.ensure_once(f"""
             kb_project([
             has_participant({action_iri}, source_iri), has_participant({action_iri}, dest_iri),
             new_iri(Role, soma:'AgentRole'), has_type(Role, soma:'AgentRole'), has_role({agent_iri},Role),
-            new_iri(Role1, "dul:'Role'"), new_iri(Role2, "dul:'Role'"), new_iri(Role3, "dul:'Role'"),
-            has_type(Role1, "soma:'Container'"), has_type(Role2, "soma:'RecipientRole'"),
-            has_type(Role3, "soma:'NonVerticalObject'"), has_role({source_iri}, Role1),
+            new_iri(Role1, dul:'Role'), new_iri(Role2, dul:'Role'), new_iri(Role3, dul:'Role'),
+            has_type(Role1, soma:'Container'), has_type(Role2, soma:'RecipientRole'),
+            has_type(Role3, soma:'MovedObject'), has_role({source_iri}, Role1),
             has_role({dest_iri}, Role2), has_role({source_iri}, Role3)]).
             """)
         elif task_type == "TiltBackward" and goal_reached is True:
             # once the goal is reached the container role is assigned to the destination object
-            # new_iri(Task, "dul:'Task'"), has_type(Task, "soma:{task_type}"), executes_task({action_iri}, Task)
+            # new_iri(Task, dul:'Task'"), has_type(Task, "soma:{task_type}"), executes_task({action_iri}, Task)
             self.prolog.ensure_once(f"""
             kb_project([
             has_participant({action_iri}, source_iri), has_participant({action_iri}, dest_iri),
             new_iri(Role, soma:'AgentRole'), has_type(Role, soma:'AgentRole'), has_role({agent_iri},Role),
-            new_iri(Role1, "dul:'Role'"), new_iri(Role2, "dul:'Role'"), new_iri(Role3, "dul:'Role'"),
-            has_type(Role1, "soma:'Container'"), has_type(Role2, "soma:'RecipientRole'"),
-            has_type(Role3, "soma:'NonVerticalObject'"), has_role({dest_iri}, Role1),
+            new_iri(Role1, dul:'Role'), new_iri(Role2, dul:'Role'), new_iri(Role3, dul:'Role'),
+            has_type(Role1, soma:'Container'), has_type(Role2, soma:'RecipientRole'),
+            has_type(Role3, soma:'MovedObject'), has_role({dest_iri}, Role1),
             has_role({dest_iri}, Role2), has_role({source_iri}, Role3)]).
             """)
 
