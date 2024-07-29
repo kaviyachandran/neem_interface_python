@@ -8,7 +8,7 @@ from tqdm import tqdm
 from neem_interface_python.rosprolog_client import Prolog, atom
 from neem_interface_python.utils.utils import Datapoint, Pose
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 class NEEMError(Exception):
@@ -24,9 +24,8 @@ class NEEMInterface:
     def __init__(self):
         self.prolog = Prolog()
         self.pool_executor = ThreadPoolExecutor(max_workers=4)
-
         # Load neem-interface.pl into KnowRob
-        neem_interface_path = os.path.join(SCRIPT_DIR, os.pardir, "neem-interface", "neem-interface.pl")
+        neem_interface_path = os.path.join(SCRIPT_DIR,  "neem-interface", "neem-interface.pl")
         self.prolog.ensure_once(f"ensure_loaded({atom(neem_interface_path)})")
 
     def __del__(self):
