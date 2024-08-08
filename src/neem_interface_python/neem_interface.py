@@ -177,6 +177,15 @@ class NEEMInterface:
         if insert_last_pose_synchronously:
             next(generator)
 
+    def get_agent_and_ee_individual(self, agent="http://knowrob.org/kb/knowrob.owl#PR2", ee="http://knowrob.org/kb/PR2.owl#PR2Gripper"):
+        q = self.prolog.ensure_once(f"""
+        kb_project([
+        new_iri(Agent, agent), has_type(Agent, agent),
+        new_iri(EE, ee), has_type(EE, ee)
+        ]).
+        """)
+        return q["Agent"], q["EE"]
+
     ### Pouring specific functions ###
     def assert_task_and_roles(self, action_iri: str, task_type: str, source_iri: str, dest_iri: str, agent_iri: str,
                               goal_reached: bool = False) -> str:
