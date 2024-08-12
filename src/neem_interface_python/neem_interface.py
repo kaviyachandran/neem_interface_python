@@ -125,6 +125,15 @@ class NEEMInterface:
         self.prolog.ensure_once(f"kb_project(has_end_link({atom(agent_iri)}, {atom(effector_iri)}))")
         return agent_iri
 
+    def assert_env(env_type= "soma:'Room'") -> str:
+         env_iri = self.prolog.ensure_once(f"""
+                kb_project([
+                    new_iri(Room, soma:'Room'),
+                    is_individual(Room),
+                    instance_of(Room, {atom(env_type)})
+                ]).""")["Room"]
+        return env_iri
+
     def assert_state(self, participant_iris: List[str], start_time: float = None, end_time: float = None,
                      state_class="soma:'State'", state_type="soma:'StateType'") -> str:
         state_iri = self.prolog.ensure_once(f"""
