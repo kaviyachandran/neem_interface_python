@@ -205,7 +205,7 @@ class NEEMInterface:
             # new_iri(Task, "dul:'Task'"), has_type(Task, "soma:'Holding'"), executes_task({action_iri}, Task),
             self.prolog.ensure_once(f"""
             kb_project([
-            has_participant({action_iri}, source_iri), has_participant({action_iri}, dest_iri), 
+            has_participant({action_iri}, {source_iri}), has_participant({action_iri}, {dest_iri}), 
             new_iri(Role, soma:'AgentRole'), has_type(Role, soma:'AgentRole'), has_role({agent_iri},Role), 
             new_iri(Role1, dul:'Role'), new_iri(Role2, dul:'Role'), new_iri(Role3, dul:'Role'),
             has_type(Role1, soma:'Container'), has_type(Role2, soma:'RecipientRole'), 
@@ -224,7 +224,7 @@ class NEEMInterface:
             # new_iri(Task, "dul:'Task'"), has_type(Task, "soma:{task_type}"), executes_task({action_iri}, Task)
             self.prolog.ensure_once(f"""
             kb_project([
-            has_participant({action_iri}, source_iri), has_participant({action_iri}, dest_iri),
+            has_participant({action_iri}, {source_iri}), has_participant({action_iri}, {dest_iri}),
             new_iri(Role, soma:'AgentRole'), has_type(Role, soma:'AgentRole'), has_role({agent_iri},Role),
             new_iri(Role1, dul:'Role'), new_iri(Role2, dul:'Role'), new_iri(Role3, dul:'Role'),
             has_type(Role1, soma:'Container'), has_type(Role2, soma:'RecipientRole'),
@@ -236,7 +236,7 @@ class NEEMInterface:
             # has_type(Role3, soma:'NonVerticalObject')
             self.prolog.ensure_once(f"""
             kb_project([
-            has_participant({action_iri}, source_iri), has_participant({action_iri}, dest_iri),
+            has_participant({action_iri}, {source_iri}), has_participant({action_iri}, {dest_iri}),
             new_iri(Role, soma:'AgentRole'), has_type(Role, soma:'AgentRole'), has_role({agent_iri},Role),
             new_iri(Role1, dul:'Role'), new_iri(Role2, dul:'Role'), new_iri(Role3, dul:'Role'),
             has_type(Role1, soma:'Container'), has_type(Role2, soma:'RecipientRole'),
@@ -248,7 +248,7 @@ class NEEMInterface:
             # new_iri(Task, dul:'Task'"), has_type(Task, "soma:{task_type}"), executes_task({action_iri}, Task)
             self.prolog.ensure_once(f"""
             kb_project([
-            has_participant({action_iri}, source_iri), has_participant({action_iri}, dest_iri),
+            has_participant({action_iri}, {source_iri}), has_participant({action_iri}, {dest_iri}),
             new_iri(Role, soma:'AgentRole'), has_type(Role, soma:'AgentRole'), has_role({agent_iri},Role),
             new_iri(Role1, dul:'Role'), new_iri(Role2, dul:'Role'), new_iri(Role3, dul:'Role'),
             has_type(Role1, soma:'Container'), has_type(Role2, soma:'RecipientRole'),
